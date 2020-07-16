@@ -6,16 +6,20 @@ lazy val library =
   new {
 
     object Version {
-      val zio = "1.0.0-RC20"
-      val zioConfig = "1.0.0-RC20"
+      val zio          = "1.0.0-RC20"
+      val zioConfig    = "1.0.0-RC20"
+      val sparkVersion = "3.0.0"
     }
 
-    val zio = "dev.zio" %% "zio" % Version.zio
-    val zioTest = "dev.zio" %% "zio-test" % Version.zio
+    val zio        = "dev.zio" %% "zio"          % Version.zio
+    val zioTest    = "dev.zio" %% "zio-test"     % Version.zio
     val zioTestSbt = "dev.zio" %% "zio-test-sbt" % Version.zio
 
-    val zioConfig = "dev.zio" %% "zio-config" % Version.zioConfig
+    val zioConfig         = "dev.zio" %% "zio-config"          % Version.zioConfig
     val zioConfigMagnolia = "dev.zio" %% "zio-config-magnolia" % Version.zioConfig
+
+    val sparkDependencies = Seq("spark-core", "spark-sql", "spark-streaming")
+      .map("org.apache.spark" %% _ % Version.sparkVersion)
   }
 
 // *****************************************************************************
@@ -31,9 +35,10 @@ lazy val root =
         library.zio,
         library.zioConfig,
         library.zioConfigMagnolia,
-        library.zioTest % Test,
+        "org.polynote" %% "uzhttp" % "0.2.4",
+        library.zioTest    % Test,
         library.zioTestSbt % Test
-      ),
+      ) ++ library.sparkDependencies,
       testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
     )
 
@@ -48,14 +53,13 @@ lazy val settings =
 lazy val commonSettings =
   Seq(
     name := "pixie",
-    scalaVersion := "2.13.1",
+    scalaVersion := "2.12.10",
     organization := "com.example"
   )
 
 lazy val commandAliases =
   addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt") ++
     addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
-
 
 // *****************************************************************************
 // Scalac
@@ -78,13 +82,21 @@ lazy val stdOptions = Seq(
   "-Xfatal-warnings"
 )
 
-lazy val stdOpts213 = Seq(
-  "-Wunused:imports",
-  "-Wvalue-discard",
-  "-Wunused:patvars",
-  "-Wunused:privates",
-  "-Wunused:params",
-  "-Wvalue-discard"
+lazy val stdOptsUpto212 = Seq(
+  "-Xfuture",
+  "-Ypartial-unification",
+  "-Ywarn-nullary-override",
+  "-Yno-adapted-args",
+  "-Ywarn-infer-any",
+  "-Ywarn-inaccessible",
+  "-Ywarn-nullary-unit",
+  "-Ywarn-unused-import"
 )
 
-scalacOptions := stdOptions ++ stdOpts213
+scalacOptions := stdOptions ++ Seq(
+  "-opt-warnings",
+  "-Ywarn-extra-implicit",
+  "-Ywarn-unused:_,imports",
+  "-Ywarn-unused:imports",
+  "-opt-inline-from:<source>"
+) ++ stdOptsUpto212
